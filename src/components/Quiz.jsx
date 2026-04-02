@@ -1,0 +1,89 @@
+import { useState } from 'react';
+import { useQuiz } from '../hooks/useQuiz';
+import { useDailyTask } from '../hooks/useDailyTask';
+import { usePlan } from '../hooks/usePlan';
+import { ProgressBar } from './ProgressBar';
+import { ScaleQuestion } from './ScaleQuestion';
+import { ForcedQuestion } from './ForcedQuestion';
+import { AreaSelector } from './AreaSelector';
+import { Results } from './Results';
+import { TEMPERAMENTS } from '../data/questions';
+
+export function Quiz({ userId, cloudData, onReset }) {
+  const { currentQuestion, currentIndex, total, scores, done, result, answer, reset } = useQuiz();
+  const [areaChosen, setAreaChosen] = useState(null);
+
+  const dominant = result?.dominant || null;
+
+  const {
+    area, taskObj, completedToday, currentDay, streak,
+    setArea, markComplete, reset: resetTask,
+  } = useDailyTask(dominant, userId, cloudData);
+
+  // ── Plano ─────────────────────────────────────────────────────────────
+  const { plan, isPremium, isBlocked, upgrade, upgrading } = usePlan(userId, cloudData);
+  const blocked = isBlocked(currentDay);
+
+  function handleReset() {
+    reset();
+    resetTask();
+    setAreaChosen(null);
+    onReset();
+  }
+
+  function handleAreaSelect(selectedArea) {
+    if (selectedArea) setArea(selectedArea);
+    setAreaChosen(selectedArea || false);
+  }
+
+  // ── Questionário ──────────────────────────────────────────────────────
+  if (!done || !result) {
+    if (!currentQuestion) return null;
+    return (
+      <div className="flex flex-col min-h-screen relative">
+        <div className="fixed inset-0 pointer-events-none">
+          <div
+            style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,213,79,0.04) 0%, transparent 70%)' }}
+            className="absolute inset-0"
+          />
+        </div>
+        <div className="relative z-10">
+          <ProgressBar current={currentIndex} total={total} scores={scores} />
+        </div>
+        <div className="flex-1 flex flex-col relative z-10" key={currentQuestion.id}>
+          {currentQuestion.type === 'scale'
+            ? <ScaleQuestion question={currentQuestion} onAnswer={answer} />
+            : <ForcedQuestion question={currentQuestion} onAnswer={answer} />
+          }
+        </div>
+      </div>
+    );
+  }
+
+  // ── Seleção de área ───────────────────────────────────────────────────
+  if (areaChosen === null && !area) {
+    const dominantColor = TEMPERAMENTS[dominant]?.color || '#FFD54F';
+    return (
+      <AreaSelector dominantColor={dominantColor} onSelect={handleAreaSelect} />
+    );
+  }
+
+  // ── Resultado ─────────────────────────────────────────────────────────
+  return (
+    <Results
+      result={result}
+      taskObj={taskObj}
+      area={area}
+      completedToday={completedToday}
+      currentDay={currentDay}
+      streak={streak}
+      plan={plan}
+      isPremium={isPremium}
+      blocked={blocked}
+      onComplete={markComplete}
+      onUpgrade={upgrade}
+      upgrading={upgrading}
+      onReset={handleReset}
+    />
+  );
+}
