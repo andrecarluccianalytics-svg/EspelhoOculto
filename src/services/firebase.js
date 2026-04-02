@@ -39,12 +39,12 @@ import {
 // ─── Configuração do Firebase ─────────────────────────────────────────────
 // ⚠️  Substitua estes valores pelos do seu projeto Firebase
 const firebaseConfig = {
-  apiKey:            'COLE_SUA_API_KEY_AQUI',
-  authDomain:        'COLE_SEU_AUTH_DOMAIN_AQUI',       // ex: meu-app.firebaseapp.com
-  projectId:         'COLE_SEU_PROJECT_ID_AQUI',
-  storageBucket:     'COLE_SEU_STORAGE_BUCKET_AQUI',   // ex: meu-app.appspot.com
-  messagingSenderId: 'COLE_SEU_SENDER_ID_AQUI',
-  appId:             'COLE_SEU_APP_ID_AQUI',
+  apiKey:            'AIzaSyANRtNv_dA1ZwUhljGE8ReObvJs-KeEgQA',
+  authDomain:        'espelho-oculto-3c589.firebaseapp.com',
+  projectId:         'espelho-oculto-3c589',
+  storageBucket:     'espelho-oculto-3c589.firebasestorage.app',
+  messagingSenderId: '509720219875',
+  appId:             '1:509720219875:web:4f56dbe95a283c322ef5d6',
 };
 
 // Verifica se as credenciais foram configuradas
