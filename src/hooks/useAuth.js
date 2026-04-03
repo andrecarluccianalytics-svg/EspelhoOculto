@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { loginWithGoogle, logout as firebaseLogout, onUserChange, isConfigured } from '../services/firebase';
+import { loginWithGoogle, logout as firebaseLogout, onUserChange, isConfigured, getRedirectResult } from '../services/firebase';
 import { loadUserData, migrateFromLocalStorage, isFirestoreAvailable } from '../services/firestore';
 
 const USER_CACHE_KEY = 'temperamento_user';
@@ -96,11 +96,11 @@ export function useAuth() {
       if (result) {
         setUser(result);
         writeCache(result);
-        // onUserChange vai disparar, mas chamamos diretamente para UX imediata
         await loadCloudData(result.uid);
       }
-    } catch {
-      setError('Não foi possível fazer login. Tente novamente.');
+    } catch (err) {
+      // Mostra a mensagem real do erro (domínio não autorizado, popup bloqueado, etc.)
+      setError(err.message || 'Não foi possível fazer login. Tente novamente.');
     } finally {
       setLoading(false);
     }

@@ -32,6 +32,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
@@ -90,11 +91,54 @@ export async function loginWithGoogle() {
       photo: user.photoURL,
     };
   } catch (err) {
-    // Usuário fechou o popup — não é erro real
+    // Usuário fechou o popup voluntariamente — não é erro real
     if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
       return null;
     }
-    console.error('[Firebase] Erro no login:', err.message);
+
+    // Domínio não autorizado no Firebase Console
+    if (err.code === 'auth/unauthorized-domain') {
+      const domain = window.location.hostname;
+      throw new Error(
+        `Domínio não autorizado: "${domain}". Adicione este domínio em Firebase Console → Authentication → Domínios autorizados.`
+      );
+    }
+
+    // Popup bloqueado pelo navegador — tenta redirect como fallback
+    if (err.code === 'auth/popup-blocked') {
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return null; // redirect vai recarregar a página
+      } catch (redirectErr) {
+        throw new Error('Login bloqueado pelo navegador. Permita popups para este site.');
+      }
+    }
+
+    // Qualquer outro erro — propaga com mensagem legível
+    console.error('[Firebase] Erro no login:', err.code, err.message);
+    throw new Error(err.message || 'Erro ao fazer login com Google.');
+  }
+}
+
+/**
+ * Verifica se há resultado de redirect pendente ao carregar a página.
+ * Chame no início do app para capturar login via redirect.
+ */
+export async function getRedirectResult() {
+  if (!auth) return null;
+  try {
+    const { getRedirectResult: fbGetRedirectResult } = await import('firebase/auth');
+    const result = await fbGetRedirectResult(auth);
+    if (!result?.user) return null;
+    const user = result.user;
+    return {
+      uid:   user.uid,
+      name:  user.displayName,
+      email: user.email,
+      photo: user.photoURL,
+    };
+  } catch (err) {
+    console.error('[Firebase] Erro no redirect result:', err.message);
     return null;
   }
 }
