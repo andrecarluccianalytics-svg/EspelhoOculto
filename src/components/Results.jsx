@@ -2,135 +2,179 @@ import { useState } from 'react';
 import { TEMPERAMENTS } from '../data/questions';
 import { TemperamentChart } from './TemperamentChart';
 import { Paywall } from './Paywall';
+import { PDFButton } from './PDFButton';
 
 // ─── Tarefa diária ────────────────────────────────────────────────────────
 
 function DailyTaskBlock({ taskObj, area, completedToday, currentDay, streak, onComplete, dominantColor }) {
+  const [justCompleted, setJustCompleted] = useState(false);
+
+  function handleComplete() {
+    setJustCompleted(true);
+    onComplete();
+  }
   const AREA_LABELS = {
     trabalho: 'Trabalho', relacionamentos: 'Relacionamentos',
     decisoes: 'Decisões', autocontrole: 'Autocontrole',
   };
   const areaLabel = AREA_LABELS[area] || area;
-
-  const streakMsg = streak >= 7
-    ? `${streak} dias seguidos — consistência real.`
-    : streak >= 3
-    ? `Você está há ${streak} dias ajustando seu padrão.`
-    : streak === 2
-    ? 'Segundo dia seguido. Padrões mudam com repetição.'
-    : null;
+  const TOTAL_DAYS = 30;
+  const pct = Math.round((currentDay / TOTAL_DAYS) * 100);
 
   return (
     <div
       className="rounded-2xl border overflow-hidden"
       style={{
-        background: completedToday ? 'rgba(67,160,71,0.05)' : `${dominantColor}09`,
-        borderColor: completedToday ? '#43A04728' : `${dominantColor}25`,
+        background: completedToday ? 'rgba(67,160,71,0.05)' : `${dominantColor}08`,
+        borderColor: completedToday ? '#43A04728' : `${dominantColor}22`,
         transition: 'all 0.35s ease',
       }}
     >
-      {/* Cabeçalho com dia e streak */}
+      {/* Cabeçalho */}
       <div
-        className="px-5 pt-4 pb-3 flex items-center justify-between"
-        style={{ borderBottom: `1px solid rgba(255,255,255,0.05)` }}
+        className="px-5 pt-4 pb-3"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
       >
-        <div className="flex items-center gap-2">
-          <span
-            className="text-[10px] font-mono tracking-[0.22em] uppercase"
-            style={{ color: completedToday ? '#43A047' : dominantColor }}
-          >
-            Dia {currentDay}
-          </span>
-          {areaLabel && (
-            <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.32)' }}
-            >
-              {areaLabel}
-            </span>
-          )}
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <p
+                className="text-[11px] font-mono tracking-[0.2em] uppercase"
+                style={{ color: completedToday ? '#43A047' : `${dominantColor}90` }}
+              >
+                Seu plano de 30 dias
+              </p>
+              <span
+                className="text-[9px] font-mono px-1.5 py-0.5 rounded"
+                style={{ background: `${dominantColor}20`, color: `${dominantColor}CC` }}
+              >
+                ativo
+              </span>
+            </div>
+            <p className="text-[13px] font-semibold text-white/70 mt-0.5">
+              Dia {currentDay} de {TOTAL_DAYS}
+              {areaLabel && (
+                <span className="text-white/35 font-normal"> · {areaLabel}</span>
+              )}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {streak > 1 && (
+              <div className="flex items-center gap-1">
+                <span style={{ fontSize: '12px' }}>🔥</span>
+                <span className="text-[12px] font-mono font-semibold"
+                  style={{ color: streak >= 7 ? '#FFD54F' : 'rgba(255,255,255,0.5)' }}>
+                  {streak}
+                </span>
+              </div>
+            )}
+            {completedToday && (
+              <div className="flex items-center gap-1">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M2 6L4.5 8.5L10 3" stroke="#43A047" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-[11px] font-semibold" style={{ color: '#43A047' }}>Feito</span>
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Streak badge */}
-        {streak > 1 && (
-          <div className="flex items-center gap-1.5">
-            <span style={{ fontSize: '13px' }}>🔥</span>
-            <span
-              className="text-[12px] font-semibold font-mono"
-              style={{ color: streak >= 7 ? '#FFD54F' : 'rgba(255,255,255,0.55)' }}
-            >
-              {streak}
-            </span>
-          </div>
-        )}
-
-        {/* Concluído */}
-        {completedToday && (
-          <div className="flex items-center gap-1.5">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2 6L4.5 8.5L10 3" stroke="#43A047" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span className="text-[11px] font-semibold" style={{ color: '#43A047' }}>Concluído</span>
-          </div>
-        )}
+        {/* Barra de progresso dos 30 dias */}
+        <div className="h-1 w-full rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+          <div
+            className="h-full rounded-full"
+            style={{
+              width: `${pct}%`,
+              background: completedToday
+                ? 'linear-gradient(90deg, #43A047, #66BB6A)'
+                : `linear-gradient(90deg, ${dominantColor}, ${dominantColor}AA)`,
+              transition: 'width 0.6s ease',
+            }}
+          />
+        </div>
       </div>
 
       {/* Corpo */}
       <div className="px-5 pt-4 pb-5">
-        {/* Mensagem de streak */}
-        {streakMsg && (
-          <p
-            className="text-[11px] font-mono mb-3"
-            style={{ color: streak >= 7 ? '#FFD54F90' : 'rgba(255,255,255,0.30)' }}
-          >
-            {streakMsg}
+        {/* Rótulo especial para o Dia 1 */}
+        {currentDay === 1 && !completedToday && (
+          <p className="text-[11px] font-mono mb-3 tracking-wide"
+            style={{ color: `${dominantColor}80` }}>
+            Primeiro passo — início do ajuste
+          </p>
+        )}
+
+        {/* Mensagem de streak quando relevante */}
+        {streak >= 3 && !completedToday && (
+          <p className="text-[11px] font-mono mb-3"
+            style={{ color: streak >= 7 ? '#FFD54F90' : 'rgba(255,255,255,0.28)' }}>
+            {streak >= 7
+              ? `${streak} dias seguidos — consistência real.`
+              : `${streak} dias seguidos. Padrões mudam com repetição.`}
           </p>
         )}
 
         {/* Tarefa */}
         <p
-          className="text-[14px] leading-[1.75] font-medium mb-3"
-          style={{ color: completedToday ? 'rgba(240,237,232,0.48)' : 'rgba(240,237,232,0.88)' }}
+          className="text-[14px] leading-[1.78] font-medium mb-3"
+          style={{ color: completedToday ? 'rgba(240,237,232,0.45)' : 'rgba(240,237,232,0.88)' }}
         >
           {taskObj?.task}
         </p>
 
-        {/* Ganho percebido */}
+        {/* Impacto da tarefa */}
         {taskObj?.gain && !completedToday && (
-          <p
-            className="text-[12px] leading-relaxed mb-4"
-            style={{ color: 'rgba(255,255,255,0.35)' }}
-          >
+          <p className="text-[12px] leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,0.32)' }}>
             {taskObj.gain}
           </p>
         )}
 
-        {/* Ação ou feedback */}
+        {/* Ganho percebido — impacto interpessoal, sempre visível */}
+        {!completedToday && (
+          <p className="text-[12px] leading-relaxed mb-4" style={{ color: 'rgba(255,255,255,0.28)' }}>
+            Esse tipo de ajuste começa a mudar como as pessoas respondem a você.
+          </p>
+        )}
+
+        {/* Ação */}
         {!completedToday ? (
           <button
-            onClick={onComplete}
+            onClick={handleComplete}
             className="w-full py-3 rounded-xl text-[13px] font-semibold transition-all duration-200 active:scale-[0.98]"
             style={{
-              background: `${dominantColor}16`,
-              border: `1px solid ${dominantColor}2E`,
+              background: `${dominantColor}14`,
+              border: `1px solid ${dominantColor}28`,
               color: dominantColor,
             }}
           >
-            Fiz isso hoje
+            Aplicado hoje
           </button>
         ) : (
-          <div>
+          <div
+            className="flex flex-col gap-2.5"
+            style={{
+              animation: justCompleted ? 'scaleIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' : 'none',
+            }}
+          >
+            {/* Micro-recompensa com destaque visual */}
             <div
-              className="rounded-xl px-4 py-3 mb-3 text-[13px] font-medium leading-relaxed"
-              style={{ background: 'rgba(67,160,71,0.10)', color: 'rgba(240,237,232,0.72)' }}
+              className="rounded-xl px-4 py-3.5"
+              style={{
+                background: 'rgba(67,160,71,0.12)',
+                border: '1px solid rgba(67,160,71,0.22)',
+                boxShadow: justCompleted ? '0 0 20px rgba(67,160,71,0.15)' : 'none',
+                transition: 'box-shadow 0.5s ease',
+              }}
             >
-              ✔ Dia concluído — você fez algo que a maioria evita.
+              <p className="text-[14px] font-semibold" style={{ color: '#43A047' }}>
+                ✔ Dia concluído
+              </p>
+              <p className="text-[13px] mt-1 leading-snug" style={{ color: 'rgba(240,237,232,0.65)' }}>
+                Você manteve consistência hoje.
+              </p>
             </div>
-            <p
-              className="text-[12px] text-center"
-              style={{ color: 'rgba(255,255,255,0.28)' }}
-            >
-              Amanhã tem o próximo passo.
+            {/* Antecipação — cria expectativa para amanhã */}
+            <p className="text-[12px] text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.30)' }}>
+              Amanhã você vai perceber algo que normalmente passa despercebido.
             </p>
           </div>
         )}
@@ -596,15 +640,26 @@ function TabPratica({ result, dominantColor, dominantName, taskObj, area, comple
           upgrading={upgrading}
         />
       ) : taskObj && (
-        <DailyTaskBlock
-          taskObj={taskObj}
-          area={area}
-          completedToday={completedToday}
-          currentDay={currentDay}
-          streak={streak}
-          onComplete={onComplete}
-          dominantColor={dominantColor}
-        />
+        <>
+          <DailyTaskBlock
+            taskObj={taskObj}
+            area={area}
+            completedToday={completedToday}
+            currentDay={currentDay}
+            streak={streak}
+            onComplete={onComplete}
+            dominantColor={dominantColor}
+          />
+          {/* Reforço de continuidade */}
+          {!completedToday && (
+            <p
+              className="text-[12px] text-center leading-relaxed animate-fade-in"
+              style={{ color: 'rgba(255,255,255,0.25)' }}
+            >
+              Você já começou esse processo. Parar agora faz você voltar ao automático.
+            </p>
+          )}
+        </>
       )}
 
       {/* 9. FRASE FINAL (punch emocional) */}
@@ -697,7 +752,7 @@ function TabPratica({ result, dominantColor, dominantName, taskObj, area, comple
 
 // ─── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────
 
-export function Results({ result, taskObj, area, completedToday, currentDay, streak, plan, isPremium, blocked, onComplete, onUpgrade, upgrading, onReset }) {
+export function Results({ result, taskObj, area, completedToday, currentDay, streak, plan, isPremium, blocked, onComplete, onUpgrade, upgrading, onReset, userName }) {
   const [activeTab, setActiveTab] = useState('overview');
 
   const {
@@ -836,11 +891,18 @@ export function Results({ result, taskObj, area, completedToday, currentDay, str
         )}
       </div>
 
-      {/* 11. BOTÃO DE COMPARTILHAR + Refazer */}
+      {/* 11. BOTÃO DE COMPARTILHAR + PDF + Refazer */}
       <div className="px-5 pb-8 pt-2 flex flex-col gap-2.5 relative z-10">
         {shareContent && (
           <ShareButton shareContent={shareContent} dominantColor={dominantColor} />
         )}
+        <PDFButton
+          result={result}
+          taskObj={taskObj}
+          area={area}
+          userName={userName}
+          dominantColor={dominantColor}
+        />
         <button
           onClick={onReset}
           className="w-full py-3.5 rounded-2xl border text-sm font-medium transition-all duration-200 hover:bg-white/5 active:scale-[0.98]"

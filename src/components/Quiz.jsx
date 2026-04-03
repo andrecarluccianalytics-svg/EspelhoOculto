@@ -6,12 +6,17 @@ import { ProgressBar } from './ProgressBar';
 import { ScaleQuestion } from './ScaleQuestion';
 import { ForcedQuestion } from './ForcedQuestion';
 import { AreaSelector } from './AreaSelector';
+import { CommitmentGate } from './CommitmentGate';
 import { Results } from './Results';
 import { TEMPERAMENTS } from '../data/questions';
 
-export function Quiz({ userId, cloudData, onReset }) {
+export function Quiz({ userId, cloudData, userName, onReset }) {
   const { currentQuestion, currentIndex, total, scores, done, result, answer, reset } = useQuiz();
-  const [areaChosen, setAreaChosen] = useState(null);
+
+  // null = não viu ainda | false = pulou | string = área escolhida
+  const [areaChosen, setAreaChosen]         = useState(null);
+  // null = não viu | false = recusou | true = confirmou
+  const [committed, setCommitted]           = useState(null);
 
   const dominant = result?.dominant || null;
 
@@ -20,7 +25,6 @@ export function Quiz({ userId, cloudData, onReset }) {
     setArea, markComplete, reset: resetTask,
   } = useDailyTask(dominant, userId, cloudData);
 
-  // ── Plano ─────────────────────────────────────────────────────────────
   const { plan, isPremium, isBlocked, upgrade, upgrading } = usePlan(userId, cloudData);
   const blocked = isBlocked(currentDay);
 
@@ -28,6 +32,7 @@ export function Quiz({ userId, cloudData, onReset }) {
     reset();
     resetTask();
     setAreaChosen(null);
+    setCommitted(null);
     onReset();
   }
 
@@ -60,6 +65,19 @@ export function Quiz({ userId, cloudData, onReset }) {
     );
   }
 
+  // ── CommitmentGate: aparece UMA VEZ antes da área (se ainda não comprometeu) ──
+  if (committed === null && !area) {
+    const dominantColor = TEMPERAMENTS[dominant]?.color || '#FFD54F';
+    const profileName   = result?.profileNameV3?.name || '';
+    return (
+      <CommitmentGate
+        dominantColor={dominantColor}
+        profileName={profileName}
+        onCommit={() => setCommitted(true)}
+      />
+    );
+  }
+
   // ── Seleção de área ───────────────────────────────────────────────────
   if (areaChosen === null && !area) {
     const dominantColor = TEMPERAMENTS[dominant]?.color || '#FFD54F';
@@ -84,6 +102,7 @@ export function Quiz({ userId, cloudData, onReset }) {
       onUpgrade={upgrade}
       upgrading={upgrading}
       onReset={handleReset}
+      userName={userName}
     />
   );
 }

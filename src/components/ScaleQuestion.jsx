@@ -8,6 +8,16 @@ const OPTION_COLORS = [
   { border: 'rgba(30,136,229,0.6)', bg: 'rgba(30,136,229,0.1)', glow: 'rgba(30,136,229,0.2)', label: '#1E88E5' },
 ];
 
+// Micro-insights exibidos durante o questionário — sem motivação genérica
+const MICRO_INSIGHTS = [
+  'Seu padrão aparece nas pequenas decisões.',
+  'Isso não é sobre certo ou errado — é sobre padrão.',
+  'Você provavelmente já percebeu esse comportamento em si.',
+  'Respostas honestas produzem resultados mais precisos.',
+  'O que parece óbvio para você pode ser invisível para outros.',
+  'Padrões que não nomeamos continuam operando no automático.',
+];
+
 export function ScaleQuestion({ question, onAnswer }) {
   const [selected, setSelected] = useState(null);
   const [animating, setAnimating] = useState(false);
@@ -32,16 +42,31 @@ export function ScaleQuestion({ question, onAnswer }) {
     mudança: 'Mudança',
   }[question.category] || question.category;
 
+  // Micro-insight: aparece em questões específicas (8, 15, 22)
+  const INSIGHT_AT = [8, 15, 22];
+  const showInsight = INSIGHT_AT.includes(question.id);
+  const insightText = showInsight
+    ? MICRO_INSIGHTS[INSIGHT_AT.indexOf(question.id) % MICRO_INSIGHTS.length]
+    : null;
+
   return (
     <div className="flex flex-col flex-1 px-5 pt-4 pb-6 gap-6">
       {/* Category tag */}
-      <div className="animate-fade-in">
+      <div className="animate-fade-in flex items-center gap-2 flex-wrap">
         <span
           className="text-[10px] font-mono tracking-[0.25em] uppercase px-3 py-1 rounded-full"
           style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)' }}
         >
           {categoryLabel}
         </span>
+        {showInsight && (
+          <span
+            className="text-[11px] italic animate-fade-in"
+            style={{ color: 'rgba(255,255,255,0.28)' }}
+          >
+            {insightText}
+          </span>
+        )}
       </div>
 
       {/* Question text */}

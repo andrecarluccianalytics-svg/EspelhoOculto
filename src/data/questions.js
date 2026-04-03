@@ -121,7 +121,7 @@ export const QUESTIONS = [
   {
     id: 15,
     type: 'scale',
-    text: 'Sou perfeccionista: entrego tarde a um trabalho medíocre.',
+    text: 'Prefiro atrasar uma entrega do que entregar algo com erros.',
     category: 'trabalho',
     weights: { S: -1, C: -1, M: 2, F: 1 },
   },

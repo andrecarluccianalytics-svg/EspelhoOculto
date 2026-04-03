@@ -139,8 +139,21 @@ export function Paywall({ currentDay, streak, dominantColor, isPremium, onUpgrad
           Você começou a mudar um padrão importante.
         </h2>
         <p className="text-white/52 text-[14px] leading-[1.7] mt-1">
-          Nos últimos dias você deu os primeiros passos.
+          Nos últimos dias você já deu os primeiros passos.
           Parar agora faz você voltar ao automático.
+        </p>
+      </div>
+
+      {/* ── 2.5 Reforço emocional — perda de avanço ── */}
+      <div
+        className="rounded-xl px-4 py-3.5"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <p className="text-[13px] leading-[1.65]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+          Você já começou esse processo.{' '}
+          <span style={{ color: 'rgba(255,255,255,0.80)', fontWeight: 500 }}>
+            Parar agora faz você perder esse avanço.
+          </span>
         </p>
       </div>
 
@@ -204,13 +217,32 @@ export function Paywall({ currentDay, streak, dominantColor, isPremium, onUpgrad
 
       {/* ── 4. Preço + CTA ── */}
       <div className="flex flex-col gap-3">
-        {/* Preço visível antes do botão */}
-        <div className="flex items-baseline justify-between px-1">
-          <span className="text-[12px] text-white/38">Plano completo</span>
-          <span className="text-[15px] font-semibold text-white/75">
-            R$&nbsp;4,90
-            <span className="text-[12px] font-normal text-white/35">/mês</span>
-          </span>
+        {/* Preço — mensal e anual */}
+        <div
+          className="rounded-xl p-4 flex flex-col gap-2"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-white/45">Plano completo · mensal</span>
+            <span className="text-[15px] font-semibold text-white/80">
+              R$&nbsp;4,90<span className="text-[11px] font-normal text-white/35">/mês</span>
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[12px] text-white/45">Plano completo · anual</span>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                style={{ background: 'rgba(67,160,71,0.15)', color: '#43A047' }}
+              >
+                economize
+              </span>
+              <span className="text-[15px] font-semibold text-white/80">
+                R$&nbsp;49,90<span className="text-[11px] font-normal text-white/35">/ano</span>
+              </span>
+            </div>
+          </div>
+          <p className="text-[11px] text-white/28 mt-1">Menos que um café por mês.</p>
         </div>
 
         {/* Botão principal */}
@@ -223,21 +255,26 @@ export function Paywall({ currentDay, streak, dominantColor, isPremium, onUpgrad
               ? 'rgba(255,255,255,0.07)'
               : `linear-gradient(135deg, ${dominantColor} 0%, ${dominantColor}CC 100%)`,
             color: upgrading ? 'rgba(255,255,255,0.35)' : '#111',
-            boxShadow: upgrading ? 'none' : `0 8px 28px ${dominantColor}30`,
+            boxShadow: upgrading ? 'none' : `0 8px 28px ${dominantColor}28`,
             letterSpacing: '-0.01em',
           }}
         >
-          {upgrading ? 'Liberando acesso...' : 'Continuar minha evolução'}
+          {upgrading ? 'Liberando acesso...' : 'Quero continuar evoluindo'}
         </button>
 
-        {/* ── 5. Urgência — abaixo do botão, tom seco ── */}
-        <p className="text-center text-[12px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.30)' }}>
-          Se você parar agora, esse progresso se perde.
+        {/* Urgência */}
+        <p className="text-center text-[12px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.28)' }}>
+          Se você parar agora, esse avanço se perde.
+        </p>
+
+        {/* Garantia leve */}
+        <p className="text-center text-[11px]" style={{ color: 'rgba(255,255,255,0.20)' }}>
+          Leva menos de 1 minuto por dia.
         </p>
       </div>
 
       {/* Nota de simulação */}
-      <p className="text-center text-[10px] text-white/15 pb-1">
+      <p className="text-center text-[10px] text-white/12 pb-1">
         Integração com pagamento em breve.
       </p>
     </div>

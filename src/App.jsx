@@ -15,14 +15,43 @@ export default function App() {
   return (
     <div className="max-w-md mx-auto relative">
 
-      {/* Barra de usuário — presente em todas as telas */}
-      <UserBar
+      {/* Header de marca — Espelho Oculto */}
+      <div
+        className="w-full flex items-center justify-between px-5 pt-5 pb-0 relative z-20"
+      >
+        <div className="flex items-center gap-2">
+          {/* Quatro pontos — identidade visual */}
+          <div className="flex items-center gap-1">
+            {['#FFD54F','#E53935','#1E88E5','#43A047'].map((color, i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === 1 || i === 2 ? '7px' : '5px',
+                  height: i === 1 || i === 2 ? '7px' : '5px',
+                  borderRadius: '50%',
+                  background: color,
+                  boxShadow: `0 0 6px ${color}70`,
+                }}
+              />
+            ))}
+          </div>
+          <span
+            className="font-display font-black tracking-tight"
+            style={{ fontSize: '1.05rem', letterSpacing: '-0.025em', color: 'rgba(240,237,232,0.82)' }}
+          >
+            Espelho Oculto
+          </span>
+        </div>
+
+        {/* UserBar integrado no header */}
+        <UserBar
         user={user}
         loading={loading}
         firebaseReady={firebaseReady}
         onLogin={login}
         onLogout={logout}
       />
+      </div>
 
       {/* Feedback de sincronização (não bloqueante, some sozinho) */}
       {syncMessage && (
@@ -59,6 +88,7 @@ export default function App() {
         <Quiz
           userId={user?.uid || null}
           cloudData={cloudData}
+          userName={user?.name || null}
           onReset={() => setScreen('welcome')}
         />
       )}
