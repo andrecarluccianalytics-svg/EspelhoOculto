@@ -1,17 +1,14 @@
 /**
- * useAuth.js — v3
+ * useAuth.js — v4
  *
- * Hook de autenticação com:
- * - authReady: true quando Firebase confirmou o estado inicial (logado ou não)
- * - cloudData: dados do Firestore carregados após login
- * - syncMessage: feedback de UI
+ * Regra de ouro: setAuthReady(true) é chamado NO FINALLY — sempre.
+ * Nenhum erro de Firestore, rede ou permissão pode travar o app.
  *
- * FLUXO CRÍTICO:
- *   1. App monta → authReady = false → mostra loading
- *   2. onAuthStateChanged dispara (sempre, mesmo sem usuário)
- *   3. Se logado → carrega Firestore → authReady = true
- *   4. Se não logado → authReady = true imediatamente
- *   5. App renderiza com estado correto
+ * Hierarquia de robustez:
+ *   1. try/catch em TODO await dentro do onAuthStateChanged
+ *   2. setAuthReady(true) no finally — nunca dentro do try
+ *   3. Timeout de 6s como último recurso (rede travada, erro silencioso)
+ *   4. Firestore opcional: se falhar, app funciona normalmente sem dados cloud
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -22,7 +19,12 @@ import {
   isConfigured,
   getRedirectResult,
 } from '../services/firebase';
-import { loadUserData, migrateFromLocalStorage, saveUserData, isFirestoreAvailable } from '../services/firestore';
+import {
+  loadUserData,
+  migrateFromLocalStorage,
+  saveUserData,
+  isFirestoreAvailable,
+} from '../services/firestore';
 
 const USER_CACHE_KEY = 'temperamento_user';
 
@@ -40,101 +42,131 @@ function writeCache(user) {
   } catch (_) {}
 }
 
-/**
- * @returns {{
- *   user: {uid,name,email,photo}|null,
- *   authReady: boolean,       ← NOVO: Firebase confirmou estado inicial
- *   loading: boolean,         ← login/logout em progresso
- *   error: string|null,
- *   firebaseReady: boolean,
- *   cloudData: Object|null,
- *   syncMessage: string|null,
- *   login: () => Promise<void>,
- *   logout: () => Promise<void>,
- *   refreshCloudData: () => Promise<void>,
- * }}
- */
 export function useAuth() {
   const [user, setUser]               = useState(readCache);
-  const [authReady, setAuthReady]     = useState(false);   // ← Firebase confirmou estado
+  const [authReady, setAuthReady]     = useState(false);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
   const [cloudData, setCloudData]     = useState(null);
   const [syncMessage, setSyncMessage] = useState(null);
   const [firebaseReady]               = useState(isConfigured);
 
-  // Evita carregar cloudData duas vezes na mesma sessão
   const cloudLoaded = useRef(false);
+  // Garante que setAuthReady(true) só é chamado uma vez
+  const authReadySet = useRef(false);
 
-  // ── Carrega dados do Firestore para um uid ────────────────────────────
-  async function loadCloudData(uid, showMessage = true) {
-    if (!isFirestoreAvailable()) return null;
-
-    let data = await loadUserData(uid);
-
-    if (!data) {
-      // Primeira vez: cria documento inicial + tenta migrar localStorage
-      const migrated = await migrateFromLocalStorage(uid);
-      if (migrated) {
-        data = migrated;
-        if (showMessage) setSyncMessage('Seu progresso local foi sincronizado.');
-      } else {
-        // Usuário genuinamente novo — cria doc mínimo
-        await saveUserData(uid, {
-          hasCompletedTest: false,
-          createdAt: new Date().toISOString(),
-        });
-        data = { hasCompletedTest: false };
-      }
-    } else if (showMessage) {
-      setSyncMessage('Progresso sincronizado.');
+  function markReady() {
+    if (!authReadySet.current) {
+      authReadySet.current = true;
+      setAuthReady(true);
     }
-
-    if (data) setCloudData(data);
-    setTimeout(() => setSyncMessage(null), 3000);
-    return data;
   }
 
-  // ── Observa estado de autenticação (fonte da verdade) ─────────────────
-  // Este useEffect é o ÚNICO lugar que define authReady.
+  // ── Carrega dados do Firestore — nunca lança exceção para fora ────────
+  async function loadCloudData(uid, showMessage = false) {
+    if (!isFirestoreAvailable()) {
+      console.log('[Auth] Firestore não disponível — usando localStorage');
+      return null;
+    }
+
+    try {
+      console.log('[Auth] Carregando dados do Firestore para uid:', uid);
+      let data = await loadUserData(uid);
+
+      if (!data) {
+        console.log('[Auth] Usuário novo — tentando migrar localStorage');
+        const migrated = await migrateFromLocalStorage(uid).catch(() => null);
+
+        if (migrated) {
+          data = migrated;
+          if (showMessage) setSyncMessage('Progresso local sincronizado.');
+          console.log('[Auth] Migração concluída:', migrated);
+        } else {
+          console.log('[Auth] Criando documento inicial');
+          await saveUserData(uid, {
+            hasCompletedTest: false,
+            createdAt: new Date().toISOString(),
+          }).catch(() => {});
+          data = { hasCompletedTest: false };
+        }
+      } else {
+        console.log('[Auth] Dados carregados:', data);
+        if (showMessage) setSyncMessage('Progresso sincronizado.');
+      }
+
+      if (data) setCloudData(data);
+      if (showMessage) setTimeout(() => setSyncMessage(null), 3000);
+      return data;
+
+    } catch (err) {
+      // Erro de Firestore (permissão, rede, regras expiradas) — NÃO trava o app
+      console.error('[Auth] Erro ao carregar Firestore (app continua):', err.code, err.message);
+      return null;
+    }
+  }
+
+  // ── Timeout de segurança: 6s sem resposta → libera o app ─────────────
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!authReadySet.current) {
+        console.warn('[Auth] Timeout de segurança disparado — liberando app');
+        markReady();
+      }
+    }, 6000);
+    return () => clearTimeout(timeout);
+  }, []); // eslint-disable-line
+
+  // ── onAuthStateChanged — fonte da verdade ─────────────────────────────
   useEffect(() => {
     if (!isConfigured) {
-      // Firebase não configurado — app funciona sem auth
-      setAuthReady(true);
+      console.log('[Auth] Firebase não configurado — app sem autenticação');
+      markReady();
       return;
     }
 
+    console.log('[Auth] Iniciando listener de autenticação');
+
     const unsubscribe = onUserChange(async (firebaseUser) => {
-      setUser(firebaseUser);
-      writeCache(firebaseUser);
+      console.log('[Auth] Estado de auth recebido:', firebaseUser?.email || 'não logado');
 
-      if (firebaseUser && !cloudLoaded.current) {
-        cloudLoaded.current = true;
-        await loadCloudData(firebaseUser.uid, false); // silencioso no auto-login
-      } else if (!firebaseUser) {
-        setCloudData(null);
-        setSyncMessage(null);
-        cloudLoaded.current = false;
+      try {
+        setUser(firebaseUser);
+        writeCache(firebaseUser);
+
+        if (firebaseUser && !cloudLoaded.current) {
+          cloudLoaded.current = true;
+          await loadCloudData(firebaseUser.uid, false);
+        } else if (!firebaseUser) {
+          setCloudData(null);
+          setSyncMessage(null);
+          cloudLoaded.current = false;
+        }
+      } catch (err) {
+        // Captura qualquer erro inesperado — nunca trava
+        console.error('[Auth] Erro inesperado no callback de auth:', err);
+      } finally {
+        // SEMPRE libera o app, independente do que aconteceu acima
+        markReady();
       }
-
-      // Firebase confirmou o estado — app pode renderizar
-      setAuthReady(true);
     });
 
     return unsubscribe;
   }, []); // eslint-disable-line
 
-  // ── Verifica resultado de redirect ao carregar ────────────────────────
+  // ── Redirect result (fallback de popup bloqueado) ─────────────────────
   useEffect(() => {
-    getRedirectResult().then(async (redirectUser) => {
-      if (redirectUser) {
+    getRedirectResult()
+      .then(async (redirectUser) => {
+        if (!redirectUser) return;
+        console.log('[Auth] Redirect result:', redirectUser.email);
         setUser(redirectUser);
         writeCache(redirectUser);
         cloudLoaded.current = true;
-        const data = await loadCloudData(redirectUser.uid, true);
-        if (data) setCloudData(data);
-      }
-    });
+        await loadCloudData(redirectUser.uid, true);
+      })
+      .catch((err) => {
+        console.warn('[Auth] Erro no redirect result:', err.message);
+      });
   }, []); // eslint-disable-line
 
   // ── Login manual ──────────────────────────────────────────────────────
@@ -150,6 +182,7 @@ export function useAuth() {
         await loadCloudData(result.uid, true);
       }
     } catch (err) {
+      console.error('[Auth] Erro no login:', err.message);
       setError(err.message || 'Não foi possível fazer login. Tente novamente.');
     } finally {
       setLoading(false);
@@ -166,18 +199,17 @@ export function useAuth() {
       setSyncMessage(null);
       writeCache(null);
       cloudLoaded.current = false;
-    } catch {
+    } catch (err) {
+      console.error('[Auth] Erro no logout:', err.message);
       setError('Erro ao sair. Tente novamente.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // ── Recarrega dados da nuvem manualmente ──────────────────────────────
   const refreshCloudData = useCallback(async () => {
     if (!user?.uid) return;
-    const data = await loadCloudData(user.uid, false);
-    if (data) setCloudData(data);
+    await loadCloudData(user.uid, false);
   }, [user]); // eslint-disable-line
 
   return {

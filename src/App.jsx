@@ -8,12 +8,18 @@ import { useAuth } from './hooks/useAuth';
 // Exibido apenas enquanto o Firebase confirma o estado de autenticação.
 // Dura tipicamente 200–600ms. Evita flash da tela errada.
 function AuthLoading() {
+  // Após 4s mostra mensagem de conexão lenta — o hook libera em até 6s
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div
       className="min-h-screen flex flex-col items-center justify-center gap-4"
       style={{ background: '#0A0A0F' }}
     >
-      {/* Quatro pontos pulsando */}
       <div className="flex items-center gap-2">
         {['#FFD54F', '#E53935', '#1E88E5', '#43A047'].map((color, i) => (
           <div
@@ -30,6 +36,11 @@ function AuthLoading() {
           />
         ))}
       </div>
+      {slow && (
+        <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: '11px', fontFamily: 'monospace' }}>
+          verificando conexão...
+        </p>
+      )}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 0.35; transform: scale(0.85); }
