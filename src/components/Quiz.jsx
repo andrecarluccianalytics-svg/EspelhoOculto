@@ -81,7 +81,8 @@ export function Quiz({ userId, cloudData, userName, onReset, authProps }) {
         <div className="relative z-10">
           <ProgressBar current={currentIndex} total={total} scores={scores} />
         </div>
-        <div className="flex-1 flex flex-col relative z-10" key={currentQuestion.id}>
+        {/* Question fills remaining space after ProgressBar */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }} key={currentQuestion.id}>
           {currentQuestion.type === 'scale'
             ? <ScaleQuestion question={currentQuestion} onAnswer={answer} />
             : <ForcedQuestion question={currentQuestion} onAnswer={answer} />

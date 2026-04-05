@@ -31,13 +31,17 @@ export function ForcedQuestion({ question, onAnswer }) {
   ];
 
   return (
+    /*
+     * Mesma estrutura de 3 partes do ScaleQuestion.
+     * flex-1 no bloco do meio cria o espaçamento proporcional
+     * sem justify-between no container principal.
+     */
     <div
-      className="animate-question flex flex-col flex-1 px-5"
-      style={{ paddingTop: '10px', paddingBottom: '16px', justifyContent: 'space-between' }}
+      className="animate-question flex flex-col px-5"
+      style={{ paddingTop: '10px', paddingBottom: '16px', flex: 1 }}
     >
-
-      {/* ── TOPO: categoria + pergunta ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* ── MEIO: categoria + pergunta com flex-1 ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
 
         {/* Categoria */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -69,10 +73,10 @@ export function ForcedQuestion({ question, onAnswer }) {
         </h2>
       </div>
 
-      {/* ── BASE: opções A/B agrupadas ── */}
+      {/* ── BASE: opções A/B + nota — altura natural ── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 
-        {/* Grupo com fundo sutil */}
+        {/* Grupo agrupado */}
         <div
           style={{
             background: 'rgba(255,255,255,0.02)',
@@ -98,20 +102,13 @@ export function ForcedQuestion({ question, onAnswer }) {
                   background:  isSelected ? bg            : 'transparent',
                   boxShadow:   isSelected ? `0 0 18px ${glow}` : 'none',
                   transform:   isPressed ? 'scale(0.975)' : 'scale(1)',
-                  transition: [
-                    'transform 0.09s ease',
-                    'border-color 0.15s ease',
-                    'background 0.15s ease',
-                    'box-shadow 0.18s ease',
-                  ].join(', '),
+                  transition:  'transform 0.09s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.18s ease',
                 }}
               >
                 <div className="flex items-start gap-3" style={{ padding: '10px 12px' }}>
-                  {/* Letra badge */}
                   <div
                     style={{
-                      width: '27px', height: '27px',
-                      flexShrink: 0,
+                      width: '27px', height: '27px', flexShrink: 0,
                       borderRadius: '9px',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontFamily: 'monospace', fontWeight: 700, fontSize: '12px',
@@ -122,14 +119,9 @@ export function ForcedQuestion({ question, onAnswer }) {
                   >
                     {key}
                   </div>
-
-                  {/* Texto */}
                   <p style={{
-                    margin: 0,
-                    paddingTop: '3px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    lineHeight: 1.35,
+                    margin: 0, paddingTop: '3px',
+                    fontSize: '13px', fontWeight: 500, lineHeight: 1.35,
                     color: isSelected ? '#F0EDE8' : 'rgba(240,237,232,0.58)',
                     transition: 'color 0.15s ease',
                   }}>
@@ -141,13 +133,8 @@ export function ForcedQuestion({ question, onAnswer }) {
           })}
         </div>
 
-        {/* Nota discreta abaixo do grupo */}
-        <p style={{
-          margin: 0,
-          textAlign: 'center',
-          fontSize: '10px',
-          color: 'rgba(255,255,255,0.14)',
-        }}>
+        {/* Nota */}
+        <p style={{ margin: 0, textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.14)' }}>
           Escolha a que melhor descreve você na maioria das situações
         </p>
       </div>

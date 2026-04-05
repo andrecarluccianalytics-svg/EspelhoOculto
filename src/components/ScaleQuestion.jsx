@@ -47,14 +47,23 @@ export function ScaleQuestion({ question, onAnswer }) {
     : null;
 
   return (
+    /*
+     * Estrutura de 3 partes — sem justify-between no container:
+     *
+     *  ┌─ container (flex-col, sem justify-between) ─┐
+     *  │  TOPO: categoria + pergunta (cresce com flex-1) │
+     *  │  BASE: respostas (altura natural, fixa na base) │
+     *  └─────────────────────────────────────────────────┘
+     *
+     * O flex-1 no bloco do meio empurra as respostas para baixo
+     * sem criar espaço morto — é proporcional ao conteúdo real.
+     */
     <div
-      // animate-question = questionEnter 0.22s — suaviza transição entre perguntas
-      className="animate-question flex flex-col flex-1 px-5"
-      style={{ paddingTop: '10px', paddingBottom: '16px', justifyContent: 'space-between' }}
+      className="animate-question flex flex-col px-5"
+      style={{ paddingTop: '10px', paddingBottom: '16px', flex: 1 }}
     >
-
-      {/* ── TOPO: categoria + pergunta ── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* ── MEIO: categoria + pergunta com flex-1 ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
 
         {/* Categoria */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -71,7 +80,7 @@ export function ScaleQuestion({ question, onAnswer }) {
           )}
         </div>
 
-        {/* Pergunta — max-width para linha de leitura confortável */}
+        {/* Pergunta */}
         <h2
           className="font-display font-semibold text-white/92"
           style={{
@@ -85,7 +94,7 @@ export function ScaleQuestion({ question, onAnswer }) {
         </h2>
       </div>
 
-      {/* ── BASE: grupo de opções com fundo sutil ── */}
+      {/* ── BASE: grupo de opções — altura natural, ancorado na parte inferior ── */}
       <div
         style={{
           background: 'rgba(255,255,255,0.02)',
@@ -112,18 +121,11 @@ export function ScaleQuestion({ question, onAnswer }) {
                 background:  isSelected ? colors.bg     : 'transparent',
                 boxShadow:   isSelected ? `0 0 14px ${colors.glow}` : 'none',
                 padding:     '10px 12px',
-                // Press effect
                 transform:   isPressed ? 'scale(0.975)' : 'scale(1)',
-                transition:  [
-                  'transform 0.09s ease',
-                  'border-color 0.15s ease',
-                  'background 0.15s ease',
-                  'box-shadow 0.18s ease',
-                ].join(', '),
+                transition:  'transform 0.09s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.18s ease',
               }}
             >
               <div className="flex items-center gap-3">
-                {/* Radio indicator */}
                 <div
                   style={{
                     width: '15px', height: '15px', flexShrink: 0,
@@ -138,11 +140,8 @@ export function ScaleQuestion({ question, onAnswer }) {
                     <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff' }} />
                   )}
                 </div>
-
                 <span style={{
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  lineHeight: 1.3,
+                  fontSize: '13px', fontWeight: 500, lineHeight: 1.3,
                   color: isSelected ? '#F0EDE8' : 'rgba(240,237,232,0.52)',
                   transition: 'color 0.15s ease',
                 }}>
