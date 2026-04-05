@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuiz } from '../hooks/useQuiz';
 import { useDailyTask } from '../hooks/useDailyTask';
 import { usePlan } from '../hooks/usePlan';
@@ -6,6 +6,7 @@ import { ProgressBar } from './ProgressBar';
 import { ScaleQuestion } from './ScaleQuestion';
 import { ForcedQuestion } from './ForcedQuestion';
 import { AreaSelector } from './AreaSelector';
+import { saveTestResult } from '../services/firestore';
 import { CommitmentGate } from './CommitmentGate';
 import { Results } from './Results';
 import { TEMPERAMENTS } from '../data/questions';
@@ -19,6 +20,16 @@ export function Quiz({ userId, cloudData, userName, onReset }) {
   const [committed, setCommitted]           = useState(null);
 
   const dominant = result?.dominant || null;
+
+  // ── Salva resultado no Firestore quando o teste termina ───────────────
+  // Executa uma única vez por sessão quando done+result ficam disponíveis
+  const savedResult = useRef(false);
+  useEffect(() => {
+    if (done && result && userId && !savedResult.current) {
+      savedResult.current = true;
+      saveTestResult(userId, result).catch(() => {}); // fire-and-forget silencioso
+    }
+  }, [done, result, userId]); // eslint-disable-line
 
   const {
     area, taskObj, completedToday, currentDay, streak,
