@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Welcome } from './components/Welcome';
 import { Quiz } from './components/Quiz';
-import { UserBar } from './components/UserBar';
 import { useAuth } from './hooks/useAuth';
 
-// ─── Loading inline ───────────────────────────────────────────────────────
-// Renderizado DENTRO do container principal — nunca substitui o layout.
+// ─── Splash de loading ────────────────────────────────────────────────────
+// Fica dentro do mesmo container — não substitui o DOM root.
 function InlineLoading() {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -15,71 +14,36 @@ function InlineLoading() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center gap-4"
-      style={{ minHeight: '100dvh' }}
+      style={{
+        position: 'fixed', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: '12px', background: '#0A0A0F', zIndex: 50,
+      }}
     >
-      <div className="flex items-center gap-2">
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {['#FFD54F', '#E53935', '#1E88E5', '#43A047'].map((color, i) => (
-          <div
-            key={i}
-            style={{
-              width: i === 1 || i === 2 ? '8px' : '6px',
-              height: i === 1 || i === 2 ? '8px' : '6px',
-              borderRadius: '50%',
-              background: color,
-              boxShadow: `0 0 8px ${color}80`,
-              animation: `appPulse 1.4s ease-in-out ${i * 0.15}s infinite`,
-              opacity: 0.7,
-            }}
-          />
+          <div key={i} style={{
+            width:  i === 1 || i === 2 ? '8px' : '6px',
+            height: i === 1 || i === 2 ? '8px' : '6px',
+            borderRadius: '50%', background: color,
+            boxShadow: `0 0 8px ${color}80`,
+            animation: `appPulse 1.4s ease-in-out ${i * 0.15}s infinite`,
+            opacity: 0.75,
+          }} />
         ))}
       </div>
       {slow && (
-        <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: '11px', fontFamily: 'monospace' }}>
+        <p style={{ color: 'rgba(255,255,255,0.22)', fontSize: '11px', fontFamily: 'monospace', margin: 0 }}>
           verificando conexão...
         </p>
       )}
       <style>{`
         @keyframes appPulse {
-          0%, 100% { opacity: 0.35; transform: scale(0.85); }
-          50%       { opacity: 0.9;  transform: scale(1.1); }
+          0%, 100% { opacity: 0.3;  transform: scale(0.82); }
+          50%       { opacity: 0.85; transform: scale(1.08); }
         }
       `}</style>
-    </div>
-  );
-}
-
-// ─── Brand header (welcome) ───────────────────────────────────────────────
-function BrandHeader({ user, loading, firebaseReady, onLogin, onLogout }) {
-  return (
-    <div className="w-full flex items-center justify-between px-5 pt-5 pb-0 relative z-20">
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          {['#FFD54F', '#E53935', '#1E88E5', '#43A047'].map((color, i) => (
-            <div
-              key={i}
-              style={{
-                width: i === 1 || i === 2 ? '7px' : '5px',
-                height: i === 1 || i === 2 ? '7px' : '5px',
-                borderRadius: '50%',
-                background: color,
-                boxShadow: `0 0 6px ${color}70`,
-              }}
-            />
-          ))}
-        </div>
-        <span
-          className="font-display font-black tracking-tight"
-          style={{ fontSize: '1.05rem', letterSpacing: '-0.025em', color: 'rgba(240,237,232,0.82)' }}
-        >
-          Espelho Oculto
-        </span>
-      </div>
-      <UserBar
-        user={user} loading={loading}
-        firebaseReady={firebaseReady}
-        onLogin={onLogin} onLogout={onLogout}
-      />
     </div>
   );
 }
@@ -92,101 +56,70 @@ export default function App() {
     login, logout,
   } = useAuth();
 
+  // Props de auth repassados para as telas que precisam do UserBar
+  const authProps = { user, loading, firebaseReady, onLogin: login, onLogout: logout };
+
   const [screen, setScreen] = useState('welcome');
 
-  // Redireciona para o plano quando cloudData confirmar teste concluído
+  // Quando cloudData confirmar teste concluído → vai direto ao plano
   useEffect(() => {
     if (cloudData?.hasCompletedTest && screen === 'welcome') {
       setScreen('quiz');
     }
   }, [cloudData]); // eslint-disable-line
 
-  const isQuiz = screen === 'quiz' && authReady;
-
   return (
-    // Container raiz — NUNCA sai do DOM.
-    // max-w-md centraliza em desktop; min-h-dvh garante altura correta.
-    <div
-      className="max-w-md mx-auto relative"
-      style={{ minHeight: '100dvh' }}
-    >
+    // Container absolutamente neutro — sem height, sem flex, sem padding.
+    // Cada tela (Welcome, Quiz) define seu próprio layout completo.
+    <div className="max-w-md mx-auto relative">
 
-      {/* ── Estado de loading — dentro do container, não substitui ── */}
+      {/* Loading sobreposto — posição fixed, não afeta fluxo do documento */}
       {!authReady && <InlineLoading />}
 
-      {/* ── Conteúdo principal — visível só quando authReady ── */}
-      {authReady && (
-        <>
-          {/* Header de marca — apenas nas telas não-quiz */}
-          {!isQuiz && (
-            <BrandHeader
-              user={user} loading={loading}
-              firebaseReady={firebaseReady}
-              onLogin={login} onLogout={logout}
-            />
-          )}
-
-          {/* UserBar flutuante dentro do quiz */}
-          {isQuiz && (
+      {/* Notificações de sync/erro — só na tela welcome, não-intrusivas */}
+      {authReady && screen === 'welcome' && (syncMessage || error) && (
+        <div
+          style={{
+            position: 'fixed', top: '56px', left: '50%', transform: 'translateX(-50%)',
+            width: 'min(100%, 448px)', padding: '0 20px', zIndex: 40,
+            display: 'flex', flexDirection: 'column', gap: '4px',
+          }}
+        >
+          {syncMessage && (
             <div
-              className="absolute top-0 right-0 z-30 px-4 pt-2"
-              style={{ pointerEvents: 'none' }}
+              className="px-4 py-2 rounded-xl text-[12px] text-center animate-fade-in"
+              style={{ background: 'rgba(67,160,71,0.14)', color: '#43A047', border: '1px solid rgba(67,160,71,0.22)' }}
             >
-              <div style={{ pointerEvents: 'auto' }}>
-                <UserBar
-                  user={user} loading={loading}
-                  firebaseReady={firebaseReady}
-                  onLogin={login} onLogout={logout}
-                  compact
-                />
-              </div>
+              ✓ {syncMessage}
             </div>
           )}
-
-          {/* Notificações não-bloqueantes */}
-          {(syncMessage || error) && !isQuiz && (
-            <div className="px-5 pt-2 flex flex-col gap-1">
-              {syncMessage && (
-                <div
-                  className="px-4 py-2 rounded-xl text-[12px] text-center animate-fade-in"
-                  style={{
-                    background: 'rgba(67,160,71,0.12)',
-                    color: '#43A047',
-                    border: '1px solid rgba(67,160,71,0.2)',
-                  }}
-                >
-                  ✓ {syncMessage}
-                </div>
-              )}
-              {error && (
-                <div
-                  className="px-4 py-2 rounded-xl text-[12px] text-center"
-                  style={{
-                    background: 'rgba(229,57,53,0.12)',
-                    color: '#E53935',
-                    border: '1px solid rgba(229,57,53,0.2)',
-                  }}
-                >
-                  {error}
-                </div>
-              )}
+          {error && (
+            <div
+              className="px-4 py-2 rounded-xl text-[12px] text-center"
+              style={{ background: 'rgba(229,57,53,0.14)', color: '#E53935', border: '1px solid rgba(229,57,53,0.22)' }}
+            >
+              {error}
             </div>
           )}
+        </div>
+      )}
 
-          {/* Telas */}
-          {screen === 'welcome' && (
-            <Welcome onStart={() => setScreen('quiz')} />
-          )}
+      {/* Telas — cada uma define seu próprio layout completo */}
+      {screen === 'welcome' && (
+        <Welcome
+          authProps={authProps}
+          onStart={() => setScreen('quiz')}
+        />
+      )}
 
-          {screen === 'quiz' && (
-            <Quiz
-              userId={user?.uid || null}
-              cloudData={cloudData}
-              userName={user?.name || null}
-              onReset={() => setScreen('welcome')}
-            />
-          )}
-        </>
+      {screen === 'quiz' && (
+        <Quiz
+          authProps={authProps}
+          userId={user?.uid || null}
+          cloudData={cloudData}
+          userName={user?.name || null}
+          onReset={() => setScreen('welcome')}
+        />
       )}
     </div>
   );

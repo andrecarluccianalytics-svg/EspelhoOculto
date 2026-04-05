@@ -10,8 +10,9 @@ import { saveTestResult } from '../services/firestore';
 import { CommitmentGate } from './CommitmentGate';
 import { Results } from './Results';
 import { TEMPERAMENTS } from '../data/questions';
+import { UserBar } from './UserBar';
 
-export function Quiz({ userId, cloudData, userName, onReset }) {
+export function Quiz({ userId, cloudData, userName, onReset, authProps }) {
   const { currentQuestion, currentIndex, total, scores, done, result, answer, reset } = useQuiz();
 
   // null = não viu ainda | false = pulou | string = área escolhida
@@ -63,6 +64,20 @@ export function Quiz({ userId, cloudData, userName, onReset }) {
             className="absolute inset-0"
           />
         </div>
+        {/* UserBar flutuante no canto superior direito do quiz */}
+        {authProps && (
+          <div className="absolute top-0 right-0 z-30 pr-2" style={{ pointerEvents: 'none' }}>
+            <div style={{ pointerEvents: 'auto' }}>
+              <UserBar
+                user={authProps.user}
+                loading={authProps.loading}
+                firebaseReady={authProps.firebaseReady}
+                onLogin={authProps.onLogin}
+                onLogout={authProps.onLogout}
+              />
+            </div>
+          </div>
+        )}
         <div className="relative z-10">
           <ProgressBar current={currentIndex} total={total} scores={scores} />
         </div>

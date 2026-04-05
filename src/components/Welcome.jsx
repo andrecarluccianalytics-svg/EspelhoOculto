@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { UserBar } from './UserBar';
 
 const TRAITS = [
   { color: '#FFD54F', label: 'Expressividade' },
@@ -7,7 +8,7 @@ const TRAITS = [
   { color: '#43A047', label: 'Estabilidade'  },
 ];
 
-export function Welcome({ onStart }) {
+export function Welcome({ onStart, authProps }) {
   useEffect(() => { document.title = 'Espelho Oculto'; }, []);
 
   return (
@@ -20,11 +21,20 @@ export function Welcome({ onStart }) {
         <div style={{ background: 'radial-gradient(circle at 20% 80%, rgba(67,160,71,0.04) 0%, transparent 50%)' }} className="absolute inset-0" />
       </div>
 
-      {/* Header */}
-      <div className="w-full flex justify-center animate-fade-up">
+      {/* Header — label de contexto + UserBar à direita */}
+      <div className="w-full flex items-center justify-between animate-fade-up">
         <span className="text-xs font-mono tracking-[0.3em] text-white/25 uppercase">
           Autoconhecimento aplicado
         </span>
+        {authProps && (
+          <UserBar
+            user={authProps.user}
+            loading={authProps.loading}
+            firebaseReady={authProps.firebaseReady}
+            onLogin={authProps.onLogin}
+            onLogout={authProps.onLogout}
+          />
+        )}
       </div>
 
       {/* Main */}
