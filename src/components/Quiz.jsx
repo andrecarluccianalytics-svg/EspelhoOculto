@@ -57,7 +57,7 @@ export function Quiz({ userId, cloudData, userName, onReset, authProps }) {
   if (!done || !result) {
     if (!currentQuestion) return null;
     return (
-      <div className="flex flex-col relative" style={{ height: "100dvh", maxHeight: "100dvh", overflow: "hidden" }}>
+      <div className="flex-1 flex flex-col relative overflow-hidden">
         <div className="fixed inset-0 pointer-events-none">
           <div
             style={{ background: 'radial-gradient(circle at 50% 0%, rgba(255,213,79,0.04) 0%, transparent 70%)' }}

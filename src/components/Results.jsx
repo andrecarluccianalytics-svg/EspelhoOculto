@@ -776,7 +776,7 @@ export function Results({ result, taskObj, area, completedToday, currentDay, str
   ];
 
   return (
-    <div className="flex flex-col min-h-screen relative">
+    <div className="flex-1 flex flex-col relative">
       {/* Fundo */}
       <div className="fixed inset-0 pointer-events-none">
         <div

@@ -56,7 +56,7 @@ const AREAS = [
 
 export function AreaSelector({ dominantColor, onSelect }) {
   return (
-    <div className="min-h-screen flex flex-col px-5 py-10 relative">
+    <div className="flex-1 flex flex-col px-5 py-10 relative">
       {/* Fundo */}
       <div className="fixed inset-0 pointer-events-none">
         <div

@@ -12,7 +12,7 @@ export function Welcome({ onStart, authProps }) {
   useEffect(() => { document.title = 'Espelho Oculto'; }, []);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-between px-5 py-10 relative overflow-hidden">
+    <div className="flex-1 flex flex-col items-center justify-between px-5 py-10 relative overflow-hidden">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div style={{ background: 'radial-gradient(circle at 20% 20%, rgba(255,213,79,0.06) 0%, transparent 60%)' }} className="absolute inset-0" />
