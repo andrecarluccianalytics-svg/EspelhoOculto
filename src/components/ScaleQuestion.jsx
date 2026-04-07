@@ -28,11 +28,7 @@ export function ScaleQuestion({ question, onAnswer }) {
     setSelected(value);
     setAnimating(true);
     setTimeout(() => setPressed(null), 110);
-    setTimeout(() => {
-      onAnswer(question.id, value);
-      setSelected(null);
-      setAnimating(false);
-    }, 290);
+    setTimeout(() => { onAnswer(question.id, value); setSelected(null); setAnimating(false); }, 290);
   };
 
   const categoryLabel = {
@@ -42,35 +38,22 @@ export function ScaleQuestion({ question, onAnswer }) {
 
   const INSIGHT_AT = [8, 15, 22];
   const showInsight = INSIGHT_AT.includes(question.id);
-  const insightText = showInsight
-    ? MICRO_INSIGHTS[INSIGHT_AT.indexOf(question.id) % MICRO_INSIGHTS.length]
-    : null;
+  const insightText = showInsight ? MICRO_INSIGHTS[INSIGHT_AT.indexOf(question.id) % MICRO_INSIGHTS.length] : null;
 
   return (
     /*
-     * Estrutura de 3 partes — sem justify-between no container:
-     *
-     *  ┌─ container (flex-col, sem justify-between) ─┐
-     *  │  TOPO: categoria + pergunta (cresce com flex-1) │
-     *  │  BASE: respostas (altura natural, fixa na base) │
-     *  └─────────────────────────────────────────────────┘
-     *
-     * O flex-1 no bloco do meio empurra as respostas para baixo
-     * sem criar espaço morto — é proporcional ao conteúdo real.
+     * Recebe flex:1 do pai (Quiz).
+     * Internamente:
+     *   ZONA 2 (flex:1): pergunta centralizada verticalmente
+     *   ZONA 3 (flex-shrink:0): respostas fixas na base
      */
-    <div
-      className="animate-question flex flex-col px-5"
-      style={{ paddingTop: '10px', paddingBottom: '16px', flex: 1 }}
-    >
-      {/* ── MEIO: categoria + pergunta com flex-1 ── */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+    <div className="animate-question" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0 20px 20px' }}>
 
-        {/* Categoria */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className="text-[10px] font-mono tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.28)' }}
-          >
+      {/* ZONA 2 — pergunta, cresce para preencher espaço disponível */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '10px', paddingTop: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <span className="text-[10px] font-mono tracking-[0.2em] uppercase px-2.5 py-0.5 rounded-full"
+            style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.28)' }}>
             {categoryLabel}
           </span>
           {showInsight && (
@@ -79,72 +62,40 @@ export function ScaleQuestion({ question, onAnswer }) {
             </span>
           )}
         </div>
-
-        {/* Pergunta */}
-        <h2
-          className="font-display font-semibold text-white/92"
-          style={{
-            fontSize: 'clamp(16.5px, 4.2vw, 20px)',
-            lineHeight: 1.35,
-            letterSpacing: '-0.015em',
-            maxWidth: '32ch',
-          }}
-        >
+        <h2 className="font-display font-semibold text-white/92"
+          style={{ fontSize: 'clamp(16px, 4.5vw, 20px)', lineHeight: 1.35, letterSpacing: '-0.015em', maxWidth: '32ch', margin: 0 }}>
           {question.text}
         </h2>
       </div>
 
-      {/* ── BASE: grupo de opções — altura natural, ancorado na parte inferior ── */}
-      <div
-        style={{
-          background: 'rgba(255,255,255,0.02)',
-          borderRadius: '16px',
-          padding: '8px',
-          border: '1px solid rgba(255,255,255,0.05)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '5px',
-        }}
-      >
+      {/* ZONA 3 — respostas, altura natural, sempre visíveis */}
+      <div style={{ flexShrink: 0, background: 'rgba(255,255,255,0.02)', borderRadius: '16px', padding: '8px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '5px' }}>
         {SCALE_OPTIONS.map((opt, i) => {
           const isSelected = selected === opt.value;
           const isPressed  = pressed  === opt.value;
           const colors     = OPTION_COLORS[i];
-
           return (
-            <button
-              key={opt.value}
-              onClick={() => handleSelect(opt.value)}
+            <button key={opt.value} onClick={() => handleSelect(opt.value)}
               className="choice-card w-full text-left rounded-xl border"
               style={{
                 borderColor: isSelected ? colors.border : 'rgba(255,255,255,0.06)',
-                background:  isSelected ? colors.bg     : 'transparent',
+                background:  isSelected ? colors.bg : 'transparent',
                 boxShadow:   isSelected ? `0 0 14px ${colors.glow}` : 'none',
-                padding:     '10px 12px',
-                transform:   isPressed ? 'scale(0.975)' : 'scale(1)',
-                transition:  'transform 0.09s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.18s ease',
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  style={{
-                    width: '15px', height: '15px', flexShrink: 0,
-                    borderRadius: '50%',
-                    border: `2px solid ${isSelected ? colors.label : 'rgba(255,255,255,0.18)'}`,
-                    background: isSelected ? colors.label : 'transparent',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  {isSelected && (
-                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff' }} />
-                  )}
-                </div>
-                <span style={{
-                  fontSize: '13px', fontWeight: 500, lineHeight: 1.3,
-                  color: isSelected ? '#F0EDE8' : 'rgba(240,237,232,0.52)',
-                  transition: 'color 0.15s ease',
+                padding: '10px 12px',
+                transform: isPressed ? 'scale(0.975)' : 'scale(1)',
+                transition: 'transform 0.09s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.18s ease',
+              }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '15px', height: '15px', flexShrink: 0, borderRadius: '50%',
+                  border: `2px solid ${isSelected ? colors.label : 'rgba(255,255,255,0.18)'}`,
+                  background: isSelected ? colors.label : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s ease',
                 }}>
+                  {isSelected && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#fff' }} />}
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 500, lineHeight: 1.3, color: isSelected ? '#F0EDE8' : 'rgba(240,237,232,0.52)', transition: 'color 0.15s ease' }}>
                   {opt.label}
                 </span>
               </div>

@@ -130,17 +130,19 @@ export async function migrateFromLocalStorage(userId, localStorageKey = 'tempera
  * @param {Object} result - objeto completo do getProfileData()
  * @returns {Promise<boolean>}
  */
-export async function saveTestResult(userId, result) {
+export async function saveTestResult(userId, result, scores) {
   if (!db || !userId || !result) return false;
   try {
     const payload = {
       hasCompletedTest: true,
-      dominant:  result.dominant   || null,
-      secondary: result.secondary  || null,
-      pct:       result.pct        || {},
-      sorted:    result.sorted     || [],
+      dominant:    result.dominant          || null,
+      secondary:   result.secondary         || null,
+      pct:         result.pct               || {},
+      sorted:      result.sorted            || [],
       profileName: result.profileNameV3?.name || null,
-      testDate:  new Date().toISOString(),
+      // scores são passados explicitamente — result não os contém
+      scores:      scores || {},
+      testDate:    new Date().toISOString(),
     };
     return await saveUserData(userId, payload);
   } catch (err) {
