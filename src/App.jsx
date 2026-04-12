@@ -3,7 +3,6 @@ import { Welcome } from './components/Welcome';
 import { Quiz } from './components/Quiz';
 import { useAuth } from './hooks/useAuth';
 
-// ─── Loading (fixed overlay — não participa do fluxo flex) ────────────────
 function InlineLoading() {
   const [slow, setSlow] = useState(false);
   useEffect(() => {
@@ -41,8 +40,6 @@ function InlineLoading() {
   );
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────
-// ÚNICA fonte de min-h-screen no app. Filhos usam flex-1.
 export default function App() {
   const {
     user, authReady, loading, error, firebaseReady,
@@ -50,25 +47,34 @@ export default function App() {
   } = useAuth();
 
   const authProps = { user, loading, firebaseReady, onLogin: login, onLogout: logout };
-  const [screen, setScreen] = useState('welcome');
 
-  useEffect(() => {
-    if (cloudData?.hasCompletedTest && screen === 'welcome') setScreen('quiz');
-  }, [cloudData]); // eslint-disable-line
+  // ── Roteamento baseado em cloudData ───────────────────────────────────
+  // 'auto'   = App decide com base no Firestore (estado inicial)
+  // 'welcome'= usuário clicou em "voltar" ou não tem dados
+  // 'quiz'   = usuário está no quiz/plano
+  const [screen, setScreen] = useState('auto');
+
+  // Tela efetiva: calculada no render, não em useEffect
+  // Isso elimina a janela de race condition entre authReady e cloudData
+  let effectiveScreen = screen;
+  if (screen === 'auto') {
+    if (!authReady) {
+      effectiveScreen = 'loading'; // mostra loading
+    } else if (cloudData?.hasCompletedTest) {
+      effectiveScreen = 'quiz';    // tem histórico → vai direto ao plano
+    } else {
+      effectiveScreen = 'welcome'; // sem histórico → tela inicial
+    }
+  }
 
   return (
-    // ┌─ max-w-md: centraliza em desktop ─────────────────────────────────┐
-    // │  min-h-screen: única declaração de altura total no app            │
-    // │  flex flex-col: filhos se empilham verticalmente                  │
-    // │  overflow-x-hidden: sem scroll horizontal                         │
-    // └───────────────────────────────────────────────────────────────────┘
     <div className="max-w-md mx-auto flex flex-col min-h-screen relative overflow-x-hidden">
 
-      {/* Overlay de loading — fixed, fora do fluxo flex */}
-      {!authReady && <InlineLoading />}
+      {/* Loading overlay — cobre tudo enquanto Firebase confirma estado */}
+      {(!authReady || effectiveScreen === 'loading') && <InlineLoading />}
 
-      {/* Notificações flutuantes (fixed, fora do fluxo) */}
-      {authReady && (syncMessage || error) && screen !== 'quiz' && (
+      {/* Notificações */}
+      {authReady && (syncMessage || error) && effectiveScreen !== 'quiz' && (
         <div style={{
           position: 'fixed', top: '54px', left: '50%', transform: 'translateX(-50%)',
           width: 'min(100%, 448px)', padding: '0 20px', zIndex: 40,
@@ -89,14 +95,14 @@ export default function App() {
         </div>
       )}
 
-      {/* ── Telas — todas usam flex-1 para preencher o espaço do pai ── */}
-      {screen === 'welcome' && (
+      {authReady && effectiveScreen === 'welcome' && (
         <Welcome
           authProps={authProps}
           onStart={() => setScreen('quiz')}
         />
       )}
-      {screen === 'quiz' && (
+
+      {authReady && effectiveScreen === 'quiz' && (
         <Quiz
           authProps={authProps}
           userId={user?.uid || null}

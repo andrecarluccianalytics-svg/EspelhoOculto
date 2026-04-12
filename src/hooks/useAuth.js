@@ -1,14 +1,11 @@
 /**
- * useAuth.js — v4
+ * useAuth.js — v5
  *
- * Regra de ouro: setAuthReady(true) é chamado NO FINALLY — sempre.
- * Nenhum erro de Firestore, rede ou permissão pode travar o app.
- *
- * Hierarquia de robustez:
- *   1. try/catch em TODO await dentro do onAuthStateChanged
- *   2. setAuthReady(true) no finally — nunca dentro do try
- *   3. Timeout de 6s como último recurso (rede travada, erro silencioso)
- *   4. Firestore opcional: se falhar, app funciona normalmente sem dados cloud
+ * Regras:
+ * 1. setAuthReady(true) SEMPRE no finally — nunca trava
+ * 2. Firestore é fonte da verdade — localStorage é fallback de task, não de resultado
+ * 3. migrateFromLocalStorage só roda se Firestore não tem NENHUM documento
+ * 4. cloudData é setado UMA vez e reflecte o estado real do banco
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -19,22 +16,13 @@ import {
   isConfigured,
   getRedirectResult,
 } from '../services/firebase';
-import {
-  loadUserData,
-  migrateFromLocalStorage,
-  saveUserData,
-  isFirestoreAvailable,
-} from '../services/firestore';
+import { loadUserData, saveUserData, isFirestoreAvailable } from '../services/firestore';
 
 const USER_CACHE_KEY = 'temperamento_user';
 
 function readCache() {
-  try {
-    const raw = localStorage.getItem(USER_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(USER_CACHE_KEY)); } catch { return null; }
 }
-
 function writeCache(user) {
   try {
     if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
@@ -51,9 +39,8 @@ export function useAuth() {
   const [syncMessage, setSyncMessage] = useState(null);
   const [firebaseReady]               = useState(isConfigured);
 
-  const cloudLoaded = useRef(false);
-  // Garante que setAuthReady(true) só é chamado uma vez
-  const authReadySet = useRef(false);
+  const cloudLoaded    = useRef(false);
+  const authReadySet   = useRef(false);
 
   function markReady() {
     if (!authReadySet.current) {
@@ -62,111 +49,96 @@ export function useAuth() {
     }
   }
 
-  // ── Carrega dados do Firestore — nunca lança exceção para fora ────────
-  async function loadCloudData(uid, showMessage = false) {
-    if (!isFirestoreAvailable()) {
-      console.log('[Auth] Firestore não disponível — usando localStorage');
-      return null;
-    }
-
+  // ── Carrega dados do Firestore — nunca lança exceção ─────────────────
+  async function fetchCloudData(uid, showMessage = false) {
+    if (!isFirestoreAvailable()) return null;
     try {
-      console.log('[Auth] Carregando dados do Firestore para uid:', uid);
-      let data = await loadUserData(uid);
+      console.log('[Auth] fetchCloudData uid:', uid);
+      const data = await loadUserData(uid);
 
-      if (!data) {
-        console.log('[Auth] Usuário novo — tentando migrar localStorage');
-        const migrated = await migrateFromLocalStorage(uid).catch(() => null);
-
-        if (migrated) {
-          data = migrated;
-          if (showMessage) setSyncMessage('Progresso local sincronizado.');
-          console.log('[Auth] Migração concluída:', migrated);
-        } else {
-          console.log('[Auth] Criando documento inicial');
-          await saveUserData(uid, {
-            hasCompletedTest: false,
-            createdAt: new Date().toISOString(),
-          }).catch(() => {});
-          data = { hasCompletedTest: false };
+      if (data) {
+        console.log('[Auth] Dados encontrados:', {
+          hasCompletedTest: data.hasCompletedTest,
+          planStarted: data.planStarted,
+          dominant: data.dominant,
+          scoresKeys: Object.keys(data.scores || {}),
+        });
+        setCloudData(data);
+        if (showMessage) {
+          setSyncMessage('Progresso sincronizado.');
+          setTimeout(() => setSyncMessage(null), 3000);
         }
-      } else {
-        console.log('[Auth] Dados carregados:', data);
-        if (showMessage) setSyncMessage('Progresso sincronizado.');
+        return data;
       }
 
-      if (data) setCloudData(data);
-      if (showMessage) setTimeout(() => setSyncMessage(null), 3000);
-      return data;
+      // Documento não existe — cria documento inicial vazio
+      console.log('[Auth] Documento não existe — criando inicial');
+      await saveUserData(uid, {
+        hasCompletedTest: false,
+        planStarted: false,
+        createdAt: new Date().toISOString(),
+      });
+      const fresh = { hasCompletedTest: false, planStarted: false };
+      setCloudData(fresh);
+      return fresh;
 
     } catch (err) {
-      // Erro de Firestore (permissão, rede, regras expiradas) — NÃO trava o app
-      console.error('[Auth] Erro ao carregar Firestore (app continua):', err.code, err.message);
+      console.error('[Auth] Erro ao carregar Firestore:', err.code, err.message);
+      // Se falhar (permissão, rede), libera o app sem dados cloud
+      // O quiz vai funcionar com localStorage
       return null;
     }
   }
 
-  // ── Timeout de segurança: 6s sem resposta → libera o app ─────────────
+  // ── Timeout de segurança ─────────────────────────────────────────────
   useEffect(() => {
-    const timeout = setTimeout(() => {
+    const t = setTimeout(() => {
       if (!authReadySet.current) {
-        console.warn('[Auth] Timeout de segurança disparado — liberando app');
+        console.warn('[Auth] Timeout — liberando app');
         markReady();
       }
     }, 6000);
-    return () => clearTimeout(timeout);
+    return () => clearTimeout(t);
   }, []); // eslint-disable-line
 
   // ── onAuthStateChanged — fonte da verdade ─────────────────────────────
   useEffect(() => {
-    if (!isConfigured) {
-      console.log('[Auth] Firebase não configurado — app sem autenticação');
-      markReady();
-      return;
-    }
-
-    console.log('[Auth] Iniciando listener de autenticação');
+    if (!isConfigured) { markReady(); return; }
 
     const unsubscribe = onUserChange(async (firebaseUser) => {
-      console.log('[Auth] Estado de auth recebido:', firebaseUser?.email || 'não logado');
-
+      console.log('[Auth] onAuthStateChanged:', firebaseUser?.email || 'não logado');
       try {
         setUser(firebaseUser);
         writeCache(firebaseUser);
-
         if (firebaseUser && !cloudLoaded.current) {
           cloudLoaded.current = true;
-          await loadCloudData(firebaseUser.uid, false);
+          await fetchCloudData(firebaseUser.uid, false);
         } else if (!firebaseUser) {
           setCloudData(null);
           setSyncMessage(null);
           cloudLoaded.current = false;
         }
       } catch (err) {
-        // Captura qualquer erro inesperado — nunca trava
-        console.error('[Auth] Erro inesperado no callback de auth:', err);
+        console.error('[Auth] Erro no callback:', err);
       } finally {
-        // SEMPRE libera o app, independente do que aconteceu acima
-        markReady();
+        markReady(); // SEMPRE libera
       }
     });
 
     return unsubscribe;
   }, []); // eslint-disable-line
 
-  // ── Redirect result (fallback de popup bloqueado) ─────────────────────
+  // ── Redirect result ───────────────────────────────────────────────────
   useEffect(() => {
     getRedirectResult()
       .then(async (redirectUser) => {
         if (!redirectUser) return;
-        console.log('[Auth] Redirect result:', redirectUser.email);
         setUser(redirectUser);
         writeCache(redirectUser);
         cloudLoaded.current = true;
-        await loadCloudData(redirectUser.uid, true);
+        await fetchCloudData(redirectUser.uid, true);
       })
-      .catch((err) => {
-        console.warn('[Auth] Erro no redirect result:', err.message);
-      });
+      .catch(err => console.warn('[Auth] Redirect result erro:', err.message));
   }, []); // eslint-disable-line
 
   // ── Login manual ──────────────────────────────────────────────────────
@@ -179,11 +151,10 @@ export function useAuth() {
         setUser(result);
         writeCache(result);
         cloudLoaded.current = true;
-        await loadCloudData(result.uid, true);
+        await fetchCloudData(result.uid, true);
       }
     } catch (err) {
-      console.error('[Auth] Erro no login:', err.message);
-      setError(err.message || 'Não foi possível fazer login. Tente novamente.');
+      setError(err.message || 'Não foi possível fazer login.');
     } finally {
       setLoading(false);
     }
@@ -194,34 +165,15 @@ export function useAuth() {
     setLoading(true);
     try {
       await firebaseLogout();
-      setUser(null);
-      setCloudData(null);
-      setSyncMessage(null);
+      setUser(null); setCloudData(null); setSyncMessage(null);
       writeCache(null);
       cloudLoaded.current = false;
     } catch (err) {
-      console.error('[Auth] Erro no logout:', err.message);
-      setError('Erro ao sair. Tente novamente.');
+      setError('Erro ao sair.');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const refreshCloudData = useCallback(async () => {
-    if (!user?.uid) return;
-    await loadCloudData(user.uid, false);
-  }, [user]); // eslint-disable-line
-
-  return {
-    user,
-    authReady,
-    loading,
-    error,
-    firebaseReady,
-    cloudData,
-    syncMessage,
-    login,
-    logout,
-    refreshCloudData,
-  };
+  return { user, authReady, loading, error, firebaseReady, cloudData, syncMessage, login, logout };
 }
