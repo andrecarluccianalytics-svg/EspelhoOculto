@@ -135,20 +135,39 @@ export async function saveTestResult(userId, result, scores) {
   try {
     const payload = {
       hasCompletedTest: true,
-      dominant:    result.dominant          || null,
-      secondary:   result.secondary         || null,
-      pct:         result.pct               || {},
-      sorted:      result.sorted            || [],
-      profileName: result.profileNameV3?.name || null,
-      // scores são passados explicitamente — result não os contém
-      scores:      scores || {},
-      testDate:    new Date().toISOString(),
+      planStarted:  false,          // será true quando o usuário clicar em "Quero evoluir"
+      dominant:     result.dominant          || null,
+      secondary:    result.secondary         || null,
+      pct:          result.pct               || {},
+      sorted:       result.sorted            || [],
+      profileName:  result.profileNameV3?.name || null,
+      scores:       scores || {},
+      testDate:     new Date().toISOString(),
     };
-    return await saveUserData(userId, payload);
+    // Salva com await real — não fire-and-forget — para garantir persistência
+    const ok = await saveUserData(userId, payload);
+    console.log('[Firestore] saveTestResult:', ok ? 'OK' : 'FALHOU', payload.dominant);
+    return ok;
   } catch (err) {
     console.warn('[Firestore] Erro ao salvar resultado do teste:', err.message);
     return false;
   }
+}
+
+// ─── startPlan ────────────────────────────────────────────────────────────
+
+/**
+ * Marca que o usuário iniciou o plano de 30 dias.
+ * Chamado quando clica em "Quero evoluir nos próximos 30 dias".
+ */
+export async function startPlan(userId) {
+  const ok = await saveUserData(userId, {
+    planStarted: true,
+    currentDay:  1,
+    planStartDate: new Date().toISOString(),
+  });
+  console.log('[Firestore] startPlan:', ok ? 'OK' : 'FALHOU');
+  return ok;
 }
 
 // ─── upgradeToPremium ─────────────────────────────────────────────────────
